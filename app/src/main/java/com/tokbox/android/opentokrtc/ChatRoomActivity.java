@@ -156,7 +156,6 @@ public class ChatRoomActivity extends Activity implements
         mNotificationManager =
                 (NotificationManager) getSystemService(Context.NOTIFICATION_SERVICE);
         initializeRoom();
-
     }
 
     @Override

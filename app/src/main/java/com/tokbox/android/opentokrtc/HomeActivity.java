@@ -38,6 +38,7 @@ public class HomeActivity extends Activity {
 
         usernameInput = (EditText) findViewById(R.id.input_username);
         usernameInput.setText(this.username);
+
     }
 
     public void joinRoom(View v) {

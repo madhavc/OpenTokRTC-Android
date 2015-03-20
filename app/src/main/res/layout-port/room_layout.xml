@@ -16,7 +16,8 @@
             android:id="@+id/subscriberView"
             android:layout_width="fill_parent"
             android:layout_height="match_parent"
-            android:layout_alignParentTop="true"  >
+            android:layout_alignParentTop="true"
+            android:keepScreenOn="true">
 
             <android.support.v4.view.ViewPager
                 android:id="@+id/pager"
@@ -90,7 +91,8 @@
             android:layout_alignParentBottom="true"
             android:layout_marginBottom="68dp"
             android:layout_marginLeft="20dp"
-            android:background="@drawable/publisher" />
+            android:background="@drawable/publisher"
+            android:keepScreenOn="true"/>
  		
  		<RelativeLayout
             android:id="@+id/fragment_sub_container"
