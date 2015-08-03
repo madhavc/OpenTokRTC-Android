@@ -5,11 +5,12 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.util.Log;
 
-import com.opentok.android.BaseVideoRenderer;
 import com.opentok.android.OpentokError;
 import com.opentok.android.Stream;
 import com.opentok.android.Subscriber;
 import com.tokbox.android.opentokrtc.fragments.SubscriberQualityFragment.CongestionLevel;
+
+import java.util.ArrayList;
 
 public class Participant extends Subscriber {
 
@@ -19,6 +20,8 @@ public class Participant extends Subscriber {
     private String mName;
     private Context mContext;
     private Boolean mSubscriberVideoOnly = false;
+    private ArrayList<Double> audioQualityScore = new ArrayList<>();
+    private ArrayList<Double> videoQualityScore = new ArrayList<>();
 
     private ChatRoomActivity mActivity;
 
@@ -28,7 +31,6 @@ public class Participant extends Subscriber {
         this.mContext = context;
         this.mActivity = (ChatRoomActivity) this.mContext;
         setName("User" + ((int) (Math.random() * 1000)));
-        this.setStyle(BaseVideoRenderer.STYLE_VIDEO_SCALE, BaseVideoRenderer.STYLE_VIDEO_FILL);
     }
 
     public void setUserId(String name) {
@@ -41,6 +43,32 @@ public class Participant extends Subscriber {
 
     public void setName(String name) {
         this.mName = name;
+    }
+
+    public void setAudioQualityScore(double aScore){
+        audioQualityScore.add(aScore);
+    }
+
+    public void setVideoQualityScore(double vScore){
+        videoQualityScore.add(vScore);
+    }
+
+    public double getAudioScore(){
+        double temp = 0;
+        for (int i = 0; i < audioQualityScore.size(); i++){
+            temp =+ audioQualityScore.get(i);
+        }
+        temp = (temp / audioQualityScore.size()) * 100;
+        return temp;
+    }
+
+    public double getVideoScore(){
+        double temp = 0;
+        for (int i = 0; i < videoQualityScore.size(); i++){
+            temp =+ videoQualityScore.get(i);
+        }
+        temp = (temp / videoQualityScore.size()) * 100;
+        return temp;
     }
 
     public Boolean getSubscriberVideoOnly() {

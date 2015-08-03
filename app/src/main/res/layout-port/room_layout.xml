@@ -48,7 +48,54 @@
                 android:src="@drawable/arrow_right"
                 android:onClick="nextParticipant"> 
             </ImageView>
-            
+
+             <LinearLayout
+                 android:orientation="vertical"
+                 android:layout_width="wrap_content"
+                 android:layout_height="wrap_content"
+                 android:layout_alignParentBottom="true"
+                 android:gravity="right"
+                 android:layout_marginBottom="40dp"
+                 android:layout_alignParentRight="true"
+                 android:layout_alignParentEnd="true">
+
+                 <TextView
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content"
+                     android:id="@+id/cpu"
+                     android:textColor="@android:color/holo_red_dark"
+                     android:layout_marginBottom="5dp" />
+
+                 <TextView
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content"
+                     android:id="@+id/process"
+                     android:textColor="@android:color/holo_red_dark"
+                     android:layout_marginBottom="5dp" />
+
+                 <TextView
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content"
+                     android:id="@+id/memory"
+                     android:textColor="@android:color/holo_red_dark"
+                     android:layout_marginBottom="5dp" />
+
+                 <TextView
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content"
+                     android:id="@+id/videoQualityScore"
+                     android:textColor="@android:color/holo_red_dark"
+                     android:layout_marginBottom="5dp" />
+
+                 <TextView
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content"
+                     android:id="@+id/audioQualityScore"
+                     android:textColor="@android:color/holo_red_dark"
+                     android:layout_marginBottom="5dp" />
+
+             </LinearLayout>
+
              <RelativeLayout
             android:id="@+id/audioOnlyView"
             android:layout_width="fill_parent"
@@ -80,8 +127,8 @@
             	android:layout_centerInParent="true"
             	android:indeterminate="false"
             	android:visibility="gone" />
-        
-        </RelativeLayout>
+
+         </RelativeLayout>
 
         <RelativeLayout
             android:id="@+id/publisherview"
@@ -101,6 +148,7 @@
             android:layout_alignParentTop="true"
             android:layout_centerHorizontal="true"
             android:visibility="gone" >
+
         </RelativeLayout>
 
         <RelativeLayout
@@ -132,6 +180,7 @@
              android:visibility="gone" >
 
     </RelativeLayout>
+
     </RelativeLayout>
 
     <RelativeLayout

@@ -1,13 +1,5 @@
 package com.tokbox.android.opentokrtc;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
 import android.content.Context;
 import android.os.Handler;
 import android.support.v4.view.PagerAdapter;
@@ -29,6 +21,16 @@ import com.opentok.android.OpentokError;
 import com.opentok.android.Publisher;
 import com.opentok.android.Session;
 import com.opentok.android.Stream;
+import com.opentok.android.SubscriberKit;
+import com.tokbox.android.profiler.PerformanceProfiler;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Iterator;
 
 public class Room extends Session {
 
@@ -58,6 +60,34 @@ public class Room extends Session {
     private Handler mHandler;
 
     private ChatRoomActivity mActivity;
+
+    private PerformanceProfiler mProfiler;
+
+    private static final int TIME_WINDOW = 3; //3 seconds
+
+    double period_audio_packets = 0;
+    double period_audio_packets_lost_perc = 0;
+    double period_video_byterate = 0;
+    int video_height = 0;
+    int video_width = 0;
+    int fps = 0;
+    double audioQualityScore =0;
+
+    private double mVideoPLRatio = 0.0;
+    private double mVideoBw = 0;
+
+    private double mAudioPLRatio = 0.0;
+    private long mAudioBw = 0;
+
+    private double mPrevVideoPacketsLost = 0;
+    private double mPrevVideoPacketsRcvd = 0;
+    private double mPrevVideoTimestamp = 0;
+    private long mPrevVideoBytes = 0;
+
+    private long mPrevAudioPacketsLost = 0;
+    private long mPrevAudioPacketsRcvd = 0;
+    private double mPrevAudioTimestamp = 0;
+    private long mPrevAudioBytes = 0;
 
     private PagerAdapter mPagerAdapter = new PagerAdapter() {
 
@@ -250,8 +280,23 @@ public class Room extends Session {
         }, 500);
     }
 
+//    @Override
+//    public void disconnect(){
+//        for(int i = 0; i < mParticipants.size(); i++){
+//            Toast.makeText(mContext, "Subcriber: " + mParticipants.get(i).getName()
+//                    + "Audio Score: " + mParticipants.get(i).getAudioScore() + "%"
+//                    + "Video Score: " + mParticipants.get(i).getVideoScore() + "%",
+//                    Toast.LENGTH_LONG).show();
+//
+//        this.disconnect();}
+//    }
+
     @Override
     protected void onConnected() {
+        mProfiler = new PerformanceProfiler(mContext, mActivity);
+        mProfiler.startCPUStat();
+        mProfiler.startMemStat();
+
         Publisher p = new Publisher(mContext, "Android");
         mPublisher = p;
         mPublisher.setName(mPublisherName);
@@ -311,6 +356,129 @@ public class Room extends Session {
 
         this.mParticipantsViewContainer.setAdapter(mPagerAdapter);
         mPagerAdapter.notifyDataSetChanged();
+
+        if(mCurrentParticipant != null) {
+            mCurrentParticipant.setVideoStatsListener(new SubscriberKit.VideoStatsListener() {
+                @Override
+                public void onVideoStats(SubscriberKit subscriberKit, SubscriberKit.SubscriberVideoStats subscriberVideoStats) {
+                    checkVideoStats(subscriberVideoStats);
+                }
+            });
+
+            mCurrentParticipant.setAudioStatsListener(new SubscriberKit.AudioStatsListener() {
+                @Override
+                public void onAudioStats(SubscriberKit subscriber, SubscriberKit.SubscriberAudioStats stats) {
+                    checkAudioStats(stats);
+                }
+            });
+        }
+
+
+    }
+
+    private void checkVideoStats(SubscriberKit.SubscriberVideoStats stats) {
+        double videoTimestamp = stats.timeStamp / 1000;
+        double videoQuality = 0;
+        //initialize values
+        if (mPrevVideoTimestamp == 0) {
+            mPrevVideoTimestamp = videoTimestamp;
+            mPrevVideoBytes = stats.videoBytesReceived;
+        }
+
+        if (videoTimestamp - mPrevVideoTimestamp >= TIME_WINDOW) {
+            //calculate video packets lost ratio
+            if (mPrevVideoPacketsRcvd != 0) {
+                double pl = stats.videoPacketsLost - mPrevVideoPacketsLost;
+                double pr = stats.videoPacketsReceived - mPrevVideoPacketsRcvd;
+                double pt = pl + pr;
+
+                if (pt > 0) {
+                    mVideoPLRatio =  pl / pt;
+                }
+            }
+
+            mPrevVideoPacketsLost = stats.videoPacketsLost;
+            mPrevVideoPacketsRcvd = stats.videoPacketsReceived;
+
+            if(mCurrentParticipant != null) {
+                fps = Integer.parseInt(mCurrentParticipant.getSSRCS("googFrameRateDecoded"));
+                video_height = Integer.parseInt(mCurrentParticipant.getSSRCS("googFrameHeightReceived"));
+                video_width = Integer.parseInt(mCurrentParticipant.getSSRCS("googFrameWidthReceived"));
+            }
+            period_video_byterate =  ((8 * (stats.videoBytesReceived - mPrevVideoBytes)) / (videoTimestamp - mPrevVideoTimestamp));
+            videoQuality = QosFormula.calcuateVideoQosPoint(period_video_byterate, fps, video_height, video_width);
+
+            Log.d("VIDEO QUALITY", videoQuality + "");
+
+            if(videoQuality >= 0) {
+                mCurrentParticipant.setVideoQualityScore(videoQuality);
+                mActivity.setVideoQualityScore(videoQuality);
+            }
+            else
+                Log.d("Video", "Video Score Went Below" + videoQuality );
+
+
+            //calculate video bandwidth
+            mVideoBw = period_video_byterate;
+            Log.i(LOGTAG, "Video bandwidth (bps): " + mVideoBw +
+                    " Video Bytes received: " + stats.videoBytesReceived +
+                    " Video packet lost: " + stats.videoPacketsLost +
+                    " Video packet loss ratio: " + mVideoPLRatio +
+                    " Frame Per Second " + fps +
+                    " Video Width: " + video_width +
+                    " Video Height: " + video_height);
+
+            mPrevVideoTimestamp = videoTimestamp;
+            mPrevVideoBytes = stats.videoBytesReceived;
+        }
+    }
+
+    private void checkAudioStats(SubscriberKit.SubscriberAudioStats stats) {
+        double audioTimestamp = stats.timeStamp / 1000;
+
+        //initialize values
+        if (mPrevAudioTimestamp == 0) {
+            mPrevAudioTimestamp = audioTimestamp;
+            mPrevAudioBytes = stats.audioBytesReceived;
+        }
+
+        if (audioTimestamp - mPrevAudioTimestamp >= TIME_WINDOW) {
+            //calculate audio packets lost ratio
+            if (mPrevAudioPacketsRcvd != 0) {
+                double pl = stats.audioPacketsLost - mPrevAudioPacketsLost;
+                double pr = stats.audioPacketsReceived - mPrevAudioPacketsRcvd;
+                double pt = pl + pr;
+
+                period_audio_packets = pr;
+                if (pt > 0) {
+                    mAudioPLRatio = pl / pt;
+                    period_audio_packets_lost_perc = mAudioPLRatio  * 100;
+                }
+            }
+
+            mPrevAudioPacketsLost = stats.audioPacketsLost;
+            mPrevAudioPacketsRcvd = stats.audioPacketsReceived;
+
+            audioQualityScore = QosFormula.calcuateAudioQosPoint((stats.audioBytesReceived - mPrevAudioBytes),period_audio_packets_lost_perc);
+
+            Log.d("Audio Quality", audioQualityScore + "");
+
+            if(audioQualityScore >= 0) {
+                mCurrentParticipant.setAudioQualityScore(audioQualityScore);
+                mActivity.setAudioQualityScore(audioQualityScore);
+            }
+            else
+                Log.d("Audio", "Audio Score Went Below" + audioQualityScore );
+
+
+            //calculate audio bandwidth
+            mAudioBw = (long) ((8 * (stats.audioBytesReceived - mPrevAudioBytes)) / (audioTimestamp - mPrevAudioTimestamp));
+
+            mPrevAudioTimestamp = audioTimestamp;
+            mPrevAudioBytes = stats.audioBytesReceived;
+
+            Log.i(LOGTAG, "Audio bandwidth (bps): " + mAudioBw + " Audio Bytes received: " + stats.audioBytesReceived + " Audio packet lost: " + stats.audioPacketsLost + " Audio packet loss ratio: " + mAudioPLRatio);
+        }
 
     }
 

@@ -1,18 +1,5 @@
 package com.tokbox.android.opentokrtc;
 
-import java.net.MalformedURLException;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.net.URL;
-
-import org.apache.http.HttpEntity;
-import org.apache.http.HttpResponse;
-import org.apache.http.client.HttpClient;
-import org.apache.http.client.methods.HttpGet;
-import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
-import org.json.JSONObject;
-
 import android.app.ActionBar;
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -26,7 +13,6 @@ import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.res.Configuration;
 import android.graphics.BitmapFactory;
-import android.media.AudioManager;
 import android.net.Uri;
 import android.os.AsyncTask;
 import android.os.Bundle;
@@ -58,6 +44,19 @@ import com.tokbox.android.opentokrtc.services.ClearNotificationService;
 import com.tokbox.android.opentokrtc.services.ClearNotificationService.ClearBinder;
 import com.tokbox.android.ui.AudioLevelView;
 
+import org.apache.http.HttpEntity;
+import org.apache.http.HttpResponse;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.impl.client.DefaultHttpClient;
+import org.apache.http.util.EntityUtils;
+import org.json.JSONObject;
+
+import java.net.MalformedURLException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+
 public class ChatRoomActivity extends Activity implements
         SubscriberControlFragment.SubscriberCallbacks,
         PublisherControlFragment.PublisherCallbacks {
@@ -86,6 +85,11 @@ public class ChatRoomActivity extends Activity implements
     private RelativeLayout mSubscriberAudioOnlyView;
     private RelativeLayout mMessageBox;
     private AudioLevelView mAudioLevelView;
+
+    private TextView mCPU;
+    private TextView mProcess;
+    private TextView mMemory;
+    private TextView mVideoScore, mAudioScore;
 
     protected SubscriberControlFragment mSubscriberFragment;
     protected PublisherControlFragment mPublisherFragment;
@@ -127,6 +131,12 @@ public class ChatRoomActivity extends Activity implements
         mRightArrowImage = (ImageView) findViewById(R.id.right_arrow);
         mSubscriberAudioOnlyView = (RelativeLayout) findViewById(R.id.audioOnlyView);
         mLoadingSub = (ProgressBar) findViewById(R.id.loadingSpinner);
+
+        mCPU = (TextView) findViewById(R.id.cpu);
+        mProcess = (TextView) findViewById(R.id.process);
+        mMemory = (TextView) findViewById(R.id.memory);
+        mVideoScore = (TextView) findViewById(R.id.videoQualityScore);
+        mAudioScore = (TextView) findViewById(R.id.audioQualityScore);
 
         //Initialize
         mAudioLevelView = (AudioLevelView) findViewById(R.id.subscribermeter);
@@ -238,7 +248,6 @@ public class ChatRoomActivity extends Activity implements
 
     @Override
     public void onResume() {
-        super.onResume();
         super.onResume();
         //Resume implies restore video mode if it was enable before pausing app
 
@@ -745,5 +754,50 @@ public class ChatRoomActivity extends Activity implements
     public int dpToPx(int dp) {
         double screenDensity = this.getResources().getDisplayMetrics().density;
         return (int) (screenDensity * (double) dp);
+    }
+
+    public void updateCPUStat(float cpu, float process_cpu){
+        final int CPU = (int) cpu;
+        final int Process = (int) process_cpu;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+//                Log.d(LOGTAG, "UpdateCPUStat got called");
+                mCPU.setText("Total CPU: " + CPU + "%");
+                mProcess.setText("Total Process CPU: " + Process + "%");
+
+            }
+        });
+    }
+
+    public void updateMemStat(double available_mem, double total_mem, double used_mem,  final double used_per){
+        final int usedMemoryPer = (int) used_per;
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+//                Log.d(LOGTAG, "UpdateCPUStat got called");
+                mMemory.setText("Mem Used: " + usedMemoryPer + "%");
+            }
+        });
+    }
+
+    public void setAudioQualityScore(final double score){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(LOGTAG, "UpdateAudioScore got called");
+                mAudioScore.setText("AQuality: " + (int) score);
+            }
+        });
+    }
+
+    public void setVideoQualityScore(final double score){
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                Log.d(LOGTAG, "UpdateVideoScore got called");
+                 mVideoScore.setText("VQuality: " + (int) score);
+            }
+        });
     }
 }
